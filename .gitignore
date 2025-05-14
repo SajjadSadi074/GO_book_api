@@ -1,0 +1,33 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace file (Go 1.18+)
+go.work
+go.work.sum
+
+# Output of `go build` or similar commands
+/build/
+/bin/
+/dist/
+
+# Ignore downloaded Go SDK archives
+*.tar.gz
+*.zip
+
+# Ignore editor/IDE-specific files
+.vscode/
+.idea/
+*.swp
+
+# Dependency directories (if vendoring)
+vendor/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
