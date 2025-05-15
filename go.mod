@@ -2,11 +2,13 @@ module bookapi
 
 go 1.22.2
 
-require github.com/go-chi/chi/v5 v5.2.1
+require (
+	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/jwtauth/v5 v5.3.3
+)
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	github.com/go-chi/jwtauth/v5 v5.3.3 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
