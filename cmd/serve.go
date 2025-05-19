@@ -17,7 +17,7 @@ var serveCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  `A longer description that spans multiple lines and likely contains examples`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🚀 Starting server on http://localhost:8080...")
+		fmt.Println("🚀 Starting server on http://127.0.0.1:8080...")
 
 		// Use your actual Routes() function to get the router
 		r := routes.Routes()
