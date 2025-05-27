@@ -5,72 +5,70 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 
 	"bookapi/models"
 	"github.com/go-chi/chi/v5"
 )
 
-func Home(w http.ResponseWriter, r *http.Request) {
+type BookHandler struct {
+	library *models.Library
+}
+
+// OOP: Dependency Injection
+func NewBookHandler(lib *models.Library) *BookHandler {
+	return &BookHandler{library: lib}
+}
+
+func (h *BookHandler) Home(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Welcome to the Book API!"))
 }
 
-func GetBooks(w http.ResponseWriter, r *http.Request) {
+func (h *BookHandler) GetBooks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.Books)
+	json.NewEncoder(w).Encode(h.library.GetBooks())
 }
 
-func GetBook(w http.ResponseWriter, r *http.Request) {
+func (h *BookHandler) GetBook(w http.ResponseWriter, r *http.Request) {
 	isbn := chi.URLParam(r, "isbn")
-	for _, book := range models.Books {
-		if book.ISBN == isbn {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(book)
-			return
-		}
+	book, err := h.library.GetBookByISBN(isbn)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
 	}
-	http.Error(w, "Book not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(book)
 }
 
-func CreateBook(w http.ResponseWriter, r *http.Request) {
+func (h *BookHandler) CreateBook(w http.ResponseWriter, r *http.Request) {
 	var newBook models.Book
 	if err := json.NewDecoder(r.Body).Decode(&newBook); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+
 	if newBook.Title == "" || newBook.Author == "" || newBook.ISBN == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
-	for _, b := range models.Books {
-		if b.ISBN == newBook.ISBN {
-			http.Error(w, "Book with this ISBN already exists", http.StatusConflict)
-			return
-		}
+
+	if err := h.library.AddBook(newBook); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
 	}
-	models.Books = append(models.Books, newBook)
-	models.AddAuthor(newBook.Author)
-	models.AddAuthorBook(newBook.ISBN, newBook.Author)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(newBook)
 }
 
-func UpdateBook(w http.ResponseWriter, r *http.Request) {
+func (h *BookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	isbn := chi.URLParam(r, "isbn")
 	var updatedBook models.Book
 	bodyBytes, _ := io.ReadAll(r.Body)
 	json.Unmarshal(bodyBytes, &updatedBook)
 
-	var found bool
-	for _, b := range models.Books {
-		if b.ISBN == isbn {
-			found = true
-			break
-		}
-	}
-	if !found {
+	_, err := h.library.GetBookByISBN(isbn)
+	if err != nil {
 		http.Error(w, "Book not found", http.StatusNotFound)
 		return
 	}
@@ -80,43 +78,21 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isbn != updatedBook.ISBN {
-		for _, b := range models.Books {
-			if b.ISBN == updatedBook.ISBN {
-				http.Error(w, "Book with this ISBN already exists", http.StatusConflict)
-				return
-			}
+		if _, err := h.library.GetBookByISBN(updatedBook.ISBN); err == nil {
+			http.Error(w, "Book with this ISBN already exists", http.StatusConflict)
+			return
 		}
 	}
-	DeleteBook(w, r)
+	_ = h.library.DeleteBookByISBN(isbn)
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-	CreateBook(w, r)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updatedBook)
+	h.CreateBook(w, r)
 }
 
-func DeleteBook(w http.ResponseWriter, r *http.Request) {
+func (h *BookHandler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	isbn := chi.URLParam(r, "isbn")
-	var index int
-	var found bool
-	for i, b := range models.Books {
-		if b.ISBN == isbn {
-			index = i
-			found = true
-			break
-		}
-	}
-	if !found {
-		http.Error(w, "Book not found", http.StatusNotFound)
+	if err := h.library.DeleteBookByISBN(isbn); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-
-	author := strings.ToLower(models.Books[index].Author)
-	for i, v := range models.AuthorBooks[author] {
-		if v == isbn {
-			models.AuthorBooks[author] = append(models.AuthorBooks[author][:i], models.AuthorBooks[author][i+1:]...)
-			break
-		}
-	}
-	models.Books = append(models.Books[:index], models.Books[index+1:]...)
 	w.WriteHeader(http.StatusNoContent)
 }
