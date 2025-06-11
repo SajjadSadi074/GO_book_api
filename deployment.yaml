@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: book-api-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: book-api
@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: book-api
-        image: bookapi
+        image: sadi74/bookapi
         ports:
         - containerPort: 8080
